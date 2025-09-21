@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FarmQuest: The Sustainable Farming Game</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7fbeb;
+            color: #333;
+        }
+        .container {
+            max-width: 900px;
+        }
+        .glass-card {
+            background-color: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .badge-icon {
+            filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.2));
+        }
+        /* Level Up animation */
+        @keyframes pop-in {
+            0% { transform: scale(0.5) translateY(-50%) translateX(-50%); opacity: 0; }
+            80% { transform: scale(1.1) translateY(-50%) translateX(-50%); opacity: 1; }
+            100% { transform: scale(1) translateY(-50%) translateX(-50%); opacity: 1; }
+        }
+        .animate-pop-in {
+            animation: pop-in 0.5s ease-out forwards;
+        }
+        @keyframes pulse-once {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        .animate-pulse-once {
+            animation: pulse-once 0.6s ease-in-out;
+        }
+    </style>
+</head>
+<body class="p-4 sm:p-8 flex flex-col items-center min-h-screen">
+    <div class="container w-full">
+        <header class="text-center mb-10">
+            <h1 class="text-4xl sm:text-5xl font-bold text-green-700">FarmQuest</h1>
+            <p class="mt-2 text-lg text-gray-600">Gamified Sustainable Farming</p>
+        </header>
+
+        <main class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+            <div class="md:col-span-2 space-y-6">
+                <div class="glass-card rounded-2xl p-6">
+                    <h2 class="text-2xl font-bold text-gray-700 mb-4">Your Dashboard</h2>
+                    <div id="user-profile" class="flex items-center mb-4">
+                        <input type="text" id="username-input" class="w-1/2 p-2 rounded-lg bg-gray-100 border border-gray-300 placeholder-gray-500" placeholder="Enter your name">
+                        <button id="save-username" class="ml-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors">Save</button>
+                    </div>
+
+                    <div class="flex items-center justify-between bg-white bg-opacity-70 p-4 rounded-xl mb-4">
+                        <div>
+                            <p class="text-sm text-gray-500">Sustainability Score</p>
+                            <span id="sustainability-score" class="text-3xl font-bold text-green-600">0</span>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500 text-right">Farmer Level</p>
+                            <span id="farmer-level" class="text-3xl font-bold text-yellow-600">1</span>
+                        </div>
+                    </div>
+
+                    <div class="bg-gray-200 rounded-full h-4 relative overflow-hidden">
+                        <div id="progress-bar" class="bg-yellow-500 h-full transition-all duration-500 ease-in-out" style="width: 0%;"></div>
+                        <span id="progress-text" class="absolute inset-0 flex items-center justify-center text-xs font-semibold text-white">0% to Level 2</span>
+                    </div>
+
+                    <div class="mt-6">
+                        <h3 class="text-xl font-semibold text-gray-700 mb-3">Earned Badges</h3>
+                        <div id="badges-container" class="flex flex-wrap gap-4 justify-center sm:justify-start">
+                             </div>
+                    </div>
+                </div>
+
+                <div class="glass-card rounded-2xl p-6">
+                    <h2 class="text-2xl font-bold text-gray-700 mb-4">Missions & Challenges</h2>
+                    <div id="quests-container" class="space-y-4">
+                        </div>
+                </div>
+            </div>
+
+            <div class="md:col-span-1 space-y-6">
+                <div class="glass-card rounded-2xl p-6">
+                    <h2 class="text-2xl font-bold text-gray-700 mb-4">Community Leaderboard</h2>
+                    <div id="leaderboard-container" class="space-y-4">
+                        </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // --- Game Data ---
+        const ALL_QUESTS = [
+            { id: 'q1', title: 'Mulching Mastery', description: 'Complete 3 weeks of mulching on banana fields to improve soil moisture and health.', points: 25, badge: '💧', badgeTitle: 'Water Saver' },
+            { id: 'q2', title: 'Bio-Pesticide Pioneer', description: 'Successfully switch to a bio-pesticide for one full season.', points: 40, badge: '🐞', badgeTitle: 'Eco Warrior' },
+            { id: 'q3', title: 'Mixed Cropping Champion', description: 'Plant three different crops together in one area to promote biodiversity.', points: 30, badge: '🌾', badgeTitle: 'Biodiversity Booster' },
+            { id: 'q4', title: 'Soil Health Innovator', description: 'Test and enrich your soil with organic compost for one harvest cycle.', points: 50, badge: '🪱', badgeTitle: 'Soil Superhero' },
+            { id: 'q5', title: 'Water-Wise Farmer', description: 'Implement drip irrigation and reduce water usage by 20% in one season.', points: 35, badge: '🚰', badgeTitle: 'Hydro Hero' },
+            { id: 'q6', title: 'Native Species Guardian', description: 'Introduce or maintain native plant species on your farm borders.', points: 20, badge: '🌳', badgeTitle: 'Green Guardian' },
+            { id: 'q7', title: 'Solar Power Savvy', description: 'Install a small solar panel for farm equipment and reduce electricity use.', points: 60, badge: '☀️', badgeTitle: 'Solar Champion' },
+            { id: 'q8', title: 'Community Composter', description: 'Create and maintain a shared community compost pile with your neighbors.', points: 45, badge: '♻️', badgeTitle: 'Recycle Guru' }
+        ];
+
+        // --- Game State Management ---
+        let gameState = {
+            username: 'Farmer',
+            score: 0,
+            level: 1,
+            exp: 0,
+            expToNextLevel: 100,
+            badges: [],
+            completedQuests: [],
+            availableQuests: [],
+        };
+        const MAX_AVAILABLE_QUESTS = 3;
+
+        // Load game state from local storage or set initial state
+        function loadGameState() {
+            const savedState = localStorage.getItem('farmquestGameState');
+            if (savedState) {
+                gameState = JSON.parse(savedState);
+                gameState.completedQuests = new Set(gameState.completedQuests);
+                gameState.availableQuests = gameState.availableQuests || [];
+            }
+            const savedUsername = localStorage.getItem('farmquestUsername');
+            if (savedUsername) {
+                gameState.username = savedUsername;
+            }
+        }
+
+        // Save game state to local storage
+        function saveGameState() {
+            const stateToSave = {
+                ...gameState,
+                completedQuests: [...gameState.completedQuests]
+            };
+            localStorage.setItem('farmquestGameState', JSON.stringify(stateToSave));
+            localStorage.setItem('farmquestUsername', gameState.username);
+        }
+
+        // Assign new quests to the user
+        function assignNewQuests() {
+            // Remove any completed quests from the available list
+            gameState.availableQuests = gameState.availableQuests.filter(q => !gameState.completedQuests.has(q.id));
+
+            while (gameState.availableQuests.length < MAX_AVAILABLE_QUESTS) {
+                const unassignedQuests = ALL_QUESTS.filter(q => !gameState.completedQuests.has(q.id) && !gameState.availableQuests.includes(q.id));
+                if (unassignedQuests.length === 0) break; // No more quests to assign
+
+                const newQuest = unassignedQuests[Math.floor(Math.random() * unassignedQuests.length)];
+                if (!gameState.availableQuests.some(q => q.id === newQuest.id)) {
+                    gameState.availableQuests.push(newQuest);
+                }
+            }
+            saveGameState();
+        }
+
+        // --- UI Elements ---
+        const usernameInput = document.getElementById('username-input');
+        const saveUsernameBtn = document.getElementById('save-username');
+        const scoreEl = document.getElementById('sustainability-score');
+        const levelEl = document.getElementById('farmer-level');
+        const progressBarEl = document.getElementById('progress-bar');
+        const progressTextEl = document.getElementById('progress-text');
+        const questsContainer = document.getElementById('quests-container');
+        const leaderboardContainer = document.getElementById('leaderboard-container');
+        const badgesContainer = document.getElementById('badges-container');
+
+        // --- Core Functions ---
+        function updateUI() {
+            usernameInput.value = gameState.username;
+            scoreEl.textContent = gameState.score;
+            levelEl.textContent = gameState.level;
+
+            const progress = (gameState.exp / gameState.expToNextLevel) * 100;
+            progressBarEl.style.width = `${Math.min(100, progress)}%`;
+            progressTextEl.textContent = `${Math.round(progress)}% to Level ${gameState.level + 1}`;
+            
+            renderQuests();
+            renderLeaderboard();
+            renderBadges();
+        }
+
+        function renderQuests() {
+            questsContainer.innerHTML = '';
+            gameState.availableQuests.forEach(quest => {
+                const questHtml = `
+                    <div class="bg-white bg-opacity-70 p-4 rounded-xl flex items-center justify-between transition-transform transform hover:scale-105" id="quest-${quest.id}">
+                        <div class="flex-1 mr-4">
+                            <h4 class="font-bold text-lg text-green-700">${quest.title}</h4>
+                            <p class="text-sm text-gray-600 mt-1">${quest.description}</p>
+                        </div>
+                        <div class="text-right">
+                            <span class="font-semibold text-sm text-yellow-600">+${quest.points} pts</span>
+                            <button data-quest-id="${quest.id}" class="complete-btn ml-4 px-4 py-2 rounded-full font-semibold text-white transition-all duration-300 bg-green-600 hover:bg-green-700">
+                                Complete
+                            </button>
+                        </div>
+                    </div>
+                `;
+                questsContainer.innerHTML += questHtml;
+            });
+
+            // Re-attach event listeners
+            document.querySelectorAll('.complete-btn').forEach(button => {
+                button.addEventListener('click', handleQuestCompletion);
+            });
+        }
+
+        function handleQuestCompletion(event) {
+            const questId = event.target.dataset.questId;
+            const quest = gameState.availableQuests.find(q => q.id === questId);
+
+            if (quest) {
+                // Update game state
+                gameState.score += quest.points;
+                gameState.exp += quest.points;
+                gameState.completedQuests.add(questId);
+                
+                // Add badge if it doesn't exist
+                const badgeExists = gameState.badges.some(b => b.badgeTitle === quest.badgeTitle);
+                if (!badgeExists) {
+                    gameState.badges.push({ icon: quest.badge, badgeTitle: quest.badgeTitle });
+                }
+
+                // Check for level up
+                if (gameState.exp >= gameState.expToNextLevel) {
+                    levelUp();
+                }
+
+                saveGameState();
+                assignNewQuests();
+                updateUI();
+                
+                // Add a small animation to the completed quest card
+                const questEl = document.getElementById(`quest-${questId}`);
+                if (questEl) {
+                    questEl.classList.add('animate-pulse-once');
+                }
+            }
+        }
+
+        function levelUp() {
+            gameState.level++;
+            gameState.exp = gameState.exp - gameState.expToNextLevel;
+            gameState.expToNextLevel = Math.round(gameState.expToNextLevel * 1.5);
+            
+            const levelUpMessage = document.createElement('div');
+            levelUpMessage.className = "fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-yellow-500 text-white font-bold px-8 py-4 rounded-xl shadow-lg z-50 text-center animate-pop-in";
+            levelUpMessage.innerHTML = `
+                <p class="text-2xl mb-2">LEVEL UP!</p>
+                <p>You are now Level ${gameState.level}!</p>
+            `;
+            document.body.appendChild(levelUpMessage);
+
+            setTimeout(() => {
+                levelUpMessage.remove();
+            }, 2500);
+        }
+
+        function renderLeaderboard() {
+            leaderboardContainer.innerHTML = '';
+            const simulatedUsers = [
+                { name: 'Ravi S.', score: 350, level: 5, status: 'Top Farmer' },
+                { name: 'Priya K.', score: 280, level: 4, status: 'Rising Star' },
+                { name: 'Amit V.', score: 210, level: 3, status: 'Active Contributor' }
+            ];
+            
+            // Add current user to leaderboard and sort
+            const currentUser = { name: gameState.username, score: gameState.score, level: gameState.level, status: 'You' };
+            const sortedLeaderboard = [...simulatedUsers, currentUser].sort((a, b) => b.score - a.score);
+
+            sortedLeaderboard.forEach((player, index) => {
+                const playerHtml = `
+                    <div class="bg-white bg-opacity-70 rounded-xl p-4 flex items-center justify-between transition-transform transform hover:scale-105">
+                        <div class="flex items-center">
+                            <span class="text-xl font-bold mr-3 text-gray-500">${index + 1}.</span>
+                            <div>
+                                <h4 class="font-semibold ${player.name === gameState.username ? 'text-blue-600' : 'text-gray-700'}">${player.name}</h4>
+                                <p class="text-xs text-gray-500">${player.status}</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <span class="font-bold text-lg text-green-600">${player.score} pts</span>
+                            <p class="text-sm text-yellow-600">Lvl ${player.level}</p>
+                        </div>
+                    </div>
+                `;
+                leaderboardContainer.innerHTML += playerHtml;
+            });
+        }
+
+        function renderBadges() {
+            badgesContainer.innerHTML = '';
+            const allBadges = ALL_QUESTS.map(q => ({ icon: q.badge, badgeTitle: q.badgeTitle }));
+            const uniqueBadges = [...new Map(allBadges.map(item => [item['badgeTitle'], item])).values()];
+            const earnedBadgeTitles = gameState.badges.map(b => b.badgeTitle);
+
+            uniqueBadges.forEach(badge => {
+                const isEarned = earnedBadgeTitles.includes(badge.badgeTitle);
+                const badgeHtml = `
+                    <div class="relative group">
+                        <div class="w-16 h-16 bg-white rounded-full flex items-center justify-center text-3xl glass-card transition-transform transform ${isEarned ? 'group-hover:scale-110' : 'opacity-50 grayscale'} badge-icon" title="${badge.badgeTitle}">
+                            ${badge.icon}
+                        </div>
+                        <div class="absolute -top-10 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-800 text-white text-xs rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">
+                            ${badge.badgeTitle}
+                        </div>
+                    </div>
+                `;
+                badgesContainer.innerHTML += badgeHtml;
+            });
+        }
+        
+        // --- Event Listeners and Initial Load ---
+        saveUsernameBtn.addEventListener('click', () => {
+            const newUsername = usernameInput.value || 'Farmer';
+            gameState.username = newUsername;
+            saveGameState();
+            updateUI();
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadGameState();
+            if (gameState.availableQuests.length === 0) {
+                assignNewQuests();
+            }
+            updateUI();
+        });
+        
+    </script>
+</body>
+</html>
